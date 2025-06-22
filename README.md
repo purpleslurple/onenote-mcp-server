@@ -74,8 +74,9 @@ Edit your Claude Desktop config file:
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\\Claude\\claude_desktop_config.json`
 
-Add this configuration (replace `YOUR_CLIENT_ID` with your actual Azure client ID):
+Add this configuration (replace `/ABSOLUTE/PATH/TO/PARENT/FOLDER/weather` with your actual path):
 
+**Basic configuration:**
 ```json
 {
   "mcpServers": {
@@ -86,14 +87,33 @@ Add this configuration (replace `YOUR_CLIENT_ID` with your actual Azure client I
         "run", "python", "onenote_mcp_server.py"
       ],
       "env": {
-        "AZURE_CLIENT_ID": "YOUR_CLIENT_ID_HERE"
+        "AZURE_CLIENT_ID": "your-azure-client-id-here"
       }
     }
   }
 }
 ```
 
-**Important**: Replace `/FULL/PATH/TO/onenote-mcp-server` with the complete path to where you cloned this repo.
+**With explicit token caching control:**
+```json
+{
+  "mcpServers": {
+    "onenote": {
+      "command": "uv",
+      "args": [
+        "--directory", "/FULL/PATH/TO/onenote-mcp-server",
+        "run", "python", "onenote_mcp_server.py"
+      ],
+      "env": {
+        "AZURE_CLIENT_ID": "your-azure-client-id-here",
+        "ONENOTE_CACHE_TOKENS": "true"
+      }
+    }
+  }
+}
+```
+
+Replace `/FULL/PATH/TO/onenote-mcp-server` with the actual path to this project.
 
 ### 6. Restart Claude Desktop
 Completely quit and restart Claude Desktop. You should see OneNote tools in the 🔨 menu.
@@ -103,8 +123,39 @@ Completely quit and restart Claude Desktop. You should see OneNote tools in the 
 1. In Claude Desktop, say: **"Start OneNote authentication"**
 2. Claude will give you a URL and code
 3. Visit the URL in your browser, enter the code, and sign in
-4. Come back to Claude and say: **"Complete OneNote authentication"**
-5. You're ready to go!
+4. **Browser compatibility**: 
+   - ✅ **Firefox** (tested with 139.0.4) - works perfectly
+   - ❌ **Safari** - may have issues with Microsoft OAuth redirect
+   - ✅ **Chrome/Edge** - should work (Microsoft's browsers)
+5. Come back to Claude and say: **"Complete OneNote authentication"**
+6. You're ready to go!
+
+### Token Persistence
+
+By default, authentication tokens are cached securely on your local machine so you only need to authenticate once every few weeks/months. 
+
+**To disable token caching** (for security-sensitive environments):
+```json
+{
+  "mcpServers": {
+    "onenote": {
+      "command": "uv",
+      "args": [
+        "--directory", "/FULL/PATH/TO/onenote-mcp-server",
+        "run", "python", "onenote_mcp_server.py"
+      ],
+      "env": {
+        "AZURE_CLIENT_ID": "YOUR_CLIENT_ID_HERE",
+        "ONENOTE_CACHE_TOKENS": "false"
+      }
+    }
+  }
+}
+```
+
+**Token caching options:**
+- `ONENOTE_CACHE_TOKENS=true` (default) - Tokens persist across sessions
+- `ONENOTE_CACHE_TOKENS=false` - Authenticate every session (more secure)
 
 ## 📖 Usage Examples
 
@@ -124,10 +175,12 @@ Read the content of my "Project Plan" page
 - Check that the path in your config is correct (use full absolute path)
 - Verify uv is installed: `uv --version`
 
-### Authentication fails
-- Double-check your Azure client ID is correct
-- Make sure you granted admin consent for all permissions
-- Try deleting any cached tokens and re-authenticating
+### Authentication issues
+- **Safari OAuth problems**: Safari may not handle Microsoft's OAuth redirect properly - use Firefox or Chrome instead
+- **"nativeclient" prompts**: Normal Microsoft OAuth behavior, but if it blocks authentication, try a different browser
+- **Authentication expired**: Use "Check OneNote authentication status" to see token expiry
+- **Clear cached tokens**: Use "Clear OneNote token cache" if you need to reset authentication
+- **Recommended browsers**: Firefox (confirmed working), Chrome, or Edge for best compatibility
 
 ### "Command not found" errors
 - Make sure uv is in your PATH
