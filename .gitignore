@@ -47,3 +47,5 @@ tmp/
 temp/
 *.tmp
 *.temp
+claude_desktop_config.json
+claude_desktop_config_full.json
