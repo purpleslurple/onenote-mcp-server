@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "onenote": {
+      "command": "uv",
+      "args": [
+        "--directory", "/FULL/PATH/TO/onenote-mcp-server",
+        "run", "python", "onenote_mcp_server.py"
+      ],
+      "env": {
+        "AZURE_CLIENT_ID": "YOUR_AZURE_CLIENT_ID_HERE"
+      }
+    }
+  }
+}

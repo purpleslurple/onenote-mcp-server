@@ -1,0 +1,46 @@
+# Let's update our pyproject.toml to be more uv-friendly
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "onenote-mcp-server"
+version = "1.0.0"
+description = "Complete OneNote MCP Server for Claude Desktop - Access your entire OneNote knowledge base through AI"
+authors = [
+    {name = "Matthew Schneider", email = "matsch@sasites.com"}
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Office/Business :: Groupware",
+]
+keywords = ["onenote", "mcp", "claude", "ai", "knowledge-base", "microsoft", "graph-api"]
+
+dependencies = [
+    "mcp>=1.2.0",
+    "fastmcp>=0.2.0",
+    "msal>=1.25.0",
+    "httpx>=0.25.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/purpleslurple/onenote-mcp-server"
+Repository = "https://github.com/purpleslurple/onenote-mcp-server"
+Issues = "https://github.com/purpleslurple/onenote-mcp-server/issues"
+Documentation = "https://github.com/purpleslurple/onenote-mcp-server#readme"
+
+[project.scripts]
+onenote-mcp-server = "onenote_mcp_server:main"
+
+[tool.uv]
+dev-dependencies = []
