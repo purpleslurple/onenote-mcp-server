@@ -520,6 +520,210 @@ async def clear_token_cache() -> str:
             "error": str(e)
         }, indent=2)
 
+@mcp.tool()
+async def create_notebook(name: str, description: str = None) -> str:
+    """
+    Create a new OneNote notebook.
+    
+    Args:
+        name: Name of the new notebook
+        description: Optional description for the notebook
+    
+    Returns:
+        JSON string with the created notebook information
+    """
+    try:
+        data = {"displayName": name}
+        if description:
+            data["description"] = description
+            
+        notebook = await make_graph_request("/me/onenote/notebooks", method="POST", data=data)
+        
+        result = {
+            "status": "success",
+            "message": f"Notebook '{name}' created successfully",
+            "notebook": {
+                "id": notebook.get("id"),
+                "name": notebook.get("displayName"),
+                "created": notebook.get("createdDateTime")
+            }
+        }
+        
+        return json.dumps(result, indent=2)
+    
+    except Exception as e:
+        return f"Error creating notebook: {str(e)}"
+
+@mcp.tool()
+async def create_section(notebook_id: str, name: str) -> str:
+    """
+    Create a new section in a OneNote notebook.
+    
+    Args:
+        notebook_id: ID of the notebook to create the section in
+        name: Name of the new section
+    
+    Returns:
+        JSON string with the created section information
+    """
+    try:
+        data = {"displayName": name}
+        
+        section = await make_graph_request(
+            f"/me/onenote/notebooks/{notebook_id}/sections", 
+            method="POST", 
+            data=data
+        )
+        
+        result = {
+            "status": "success",
+            "message": f"Section '{name}' created successfully",
+            "section": {
+                "id": section.get("id"),
+                "name": section.get("displayName"),
+                "created": section.get("createdDateTime")
+            }
+        }
+        
+        return json.dumps(result, indent=2)
+    
+    except Exception as e:
+        return f"Error creating section: {str(e)}"
+
+@mcp.tool()
+async def create_page(section_id: str, title: str, content_html: str = None) -> str:
+    """
+    Create a new page in a OneNote section.
+    
+    Args:
+        section_id: ID of the section to create the page in
+        title: Title of the new page
+        content_html: Optional HTML content for the page body
+    
+    Returns:
+        JSON string with the created page information
+    """
+    try:
+        # Build the HTML structure for the page
+        if content_html:
+            # Ensure content is wrapped in proper OneNote HTML structure
+            if not content_html.strip().startswith('<html>'):
+                page_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{title}</title>
+    <meta name="created" content="{time.strftime('%Y-%m-%dT%H:%M:%S.0000000')}" />
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <div>{content_html}</div>
+    </div>
+</body>
+</html>"""
+            else:
+                page_html = content_html
+        else:
+            # Create a basic page with just the title
+            page_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{title}</title>
+    <meta name="created" content="{time.strftime('%Y-%m-%dT%H:%M:%S.0000000')}" />
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <p>Page created by OneNote MCP Server</p>
+    </div>
+</body>
+</html>"""
+        
+        # OneNote API expects multipart form data for page creation
+        async with httpx.AsyncClient() as client:
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/xhtml+xml"
+            }
+            
+            response = await client.post(
+                f"{GRAPH_BASE_URL}/me/onenote/sections/{section_id}/pages",
+                headers=headers,
+                content=page_html
+            )
+            
+            if response.status_code >= 400:
+                return f"Error creating page: {response.status_code} - {response.text}"
+            
+            page = response.json()
+        
+        result = {
+            "status": "success",
+            "message": f"Page '{title}' created successfully",
+            "page": {
+                "id": page.get("id"),
+                "title": page.get("title"),
+                "created": page.get("createdDateTime"),
+                "content_url": page.get("contentUrl")
+            }
+        }
+        
+        return json.dumps(result, indent=2)
+    
+    except Exception as e:
+        return f"Error creating page: {str(e)}"
+
+@mcp.tool()
+async def update_page_content(page_id: str, content_html: str, target_element: str = "body") -> str:
+    """
+    Update the content of an existing OneNote page.
+    
+    Args:
+        page_id: ID of the page to update
+        content_html: New HTML content to add/replace
+        target_element: Target element to update (default: "body")
+    
+    Returns:
+        Status message
+    """
+    try:
+        # OneNote PATCH API for updating page content
+        patch_data = [
+            {
+                "target": target_element,
+                "action": "append",
+                "content": content_html
+            }
+        ]
+        
+        async with httpx.AsyncClient() as client:
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = await client.patch(
+                f"{GRAPH_BASE_URL}/me/onenote/pages/{page_id}/content",
+                headers=headers,
+                json=patch_data
+            )
+            
+            if response.status_code >= 400:
+                return f"Error updating page: {response.status_code} - {response.text}"
+        
+        result = {
+            "status": "success",
+            "message": "Page content updated successfully",
+            "page_id": page_id
+        }
+        
+        return json.dumps(result, indent=2)
+    
+    except Exception as e:
+        return f"Error updating page content: {str(e)}"
+
 def main():
     """Main entry point for the server."""
     # Log token caching configuration
