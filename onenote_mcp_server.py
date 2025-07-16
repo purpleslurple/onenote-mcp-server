@@ -134,14 +134,65 @@ async def refresh_access_token() -> bool:
                     result.get("refresh_token", refresh_token),
                     result.get("expires_in", 3600)
                 )
-                logger.info("Token refreshed successfully")
+                logger.info("Token refreshed successfully via MSAL silent acquisition")
                 return True
         
-        logger.info("Token refresh failed - need new authentication")
-        return False
+        # MSAL silent acquisition failed - try manual refresh with cached refresh token
+        logger.info("MSAL silent acquisition failed, trying manual refresh with cached token")
+        return await manual_token_refresh()
         
     except Exception as e:
         logger.warning(f"Token refresh error: {e}")
+        return False
+
+async def manual_token_refresh() -> bool:
+    """Manually refresh access token using cached refresh token."""
+    global access_token, refresh_token
+    
+    if not refresh_token:
+        logger.info("No refresh token available for manual refresh")
+        return False
+    
+    try:
+        client_id = get_client_id()
+        
+        # Microsoft token endpoint
+        token_url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+        
+        # Prepare refresh token request
+        data = {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "client_id": client_id,
+            "scope": " ".join(SCOPES + ["offline_access"])  # Include offline_access for refresh requests
+        }
+        
+        # Make the refresh request
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                token_url,
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"}
+            )
+            
+            if response.status_code == 200:
+                token_data = response.json()
+                
+                # Save the new tokens
+                save_tokens(
+                    token_data["access_token"],
+                    token_data.get("refresh_token", refresh_token),  # Use new refresh token if provided
+                    token_data.get("expires_in", 3600)
+                )
+                
+                logger.info("Token refreshed successfully via manual refresh")
+                return True
+            else:
+                logger.warning(f"Manual token refresh failed: {response.status_code} - {response.text}")
+                return False
+                
+    except Exception as e:
+        logger.warning(f"Manual token refresh error: {e}")
         return False
 
 def init_msal_app(client_id: str) -> PublicClientApplication:
